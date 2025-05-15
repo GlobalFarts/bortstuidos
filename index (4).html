@@ -1,0 +1,237 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bort Anime Series - Signup/Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        #auth-section {
+            background-image: url('bort-title-card.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+    </style>
+</head>
+<body class="text-white flex items-center justify-center min-h-screen overflow-hidden">
+    <div id="auth-section" class="relative w-full h-screen flex items-center justify-center">
+        <div class="relative z-10 bg-gray-900 bg-opacity-80 p-8 rounded-lg shadow-lg w-full max-w-md">
+            <h1 class="text-3xl font-bold text-center mb-6 text-purple-400">Bort Anime Series</h1>
+            <div id="signup-form" class="">
+                <h2 class="text-xl font-semibold mb-4">Sign Up</h2>
+                <div class="mb-4">
+                    <label for="signup-username" class="block text-sm font-medium mb-1">Username</label>
+                    <input type="text" id="signup-username" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-purple-500" required>
+                </div>
+                <div class="mb-4">
+                    <label for="signup-email" class="block text-sm font-medium mb-1">Email</label>
+                    <input type="email" id="signup-email" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-purple-500" required>
+                </div>
+                <div class="mb-4">
+                    <label for="signup-password" class="block text-sm font-medium mb-1">Password</label>
+                    <input type="password" id="signup-password" oninput="checkSignupPassword()" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-purple-500" required>
+                    <span id="signup-password-check" class="text-sm mt-1"></span>
+                </div>
+                <button onclick="signup()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded mb-2">Sign Up</button>
+                <div id="g_id_onload"
+                     data-client_id="YOUR_GOOGLE_CLIENT_ID_HERE"
+                     data-callback="handleGoogleSignIn"
+                     data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="signin_with" data-shape="rectangular" data-logo_alignment="left"></div>
+                <p class="mt-4 text-center">Already have an account? <a href="#" onclick="showLogin()" class="text-purple-400 hover:underline">Login</a></p>
+            </div>
+            <div id="login-form" class="hidden">
+                <h2 class="text-xl font-semibold mb-4">Login</h2>
+                <div class="mb-4">
+                    <label for="login-username" class="block text-sm font-medium mb-1">Username</label>
+                    <input type="text" id="login-username" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-purple-500" required>
+                </div>
+                <div class="mb-4">
+                    <label for="login-password" class="block text-sm font-medium mb-1">Password</label>
+                    <input type="password" id="login-password" oninput="checkLoginPassword()" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-purple-500" required>
+                    <span id="login-password-check" class="text-sm mt-1"></span>
+                </div>
+                <button onclick="login()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded mb-2">Login</button>
+                <div id="g_id_onload"
+                     data-client_id="YOUR_GOOGLE_CLIENT_ID_HERE"
+                     data-callback="handleGoogleSignIn"
+                     data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="signin_with" data-shape="rectangular" data-logo_alignment="left"></div>
+                <p class="mt-4 text-center">No account? <a href="#" onclick="showSignup()" class="text-purple-400 hover:underline">Sign Up</a></p>
+            </div>
+        </div>
+    </div>
+    <div id="welcome-section" class="hidden relative w-full h-screen flex items-center justify-center">
+        <video id="background-video" class="absolute top-0 left-0 w-full h-full object-cover z-0" autoplay loop muted playsinline preload="auto">
+            <source src="background.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <div class="relative z-10 bg-gray-800 bg-opacity-75 p-8 rounded-lg shadow-lg w-full max-w-md text-center">
+            <h1 class="text-3xl font-bold text-purple-400 mb-4">Welcome to Bort!</h1>
+            <p class="text-lg">Website will go live after migration with S1E1. Get ready!</p>
+        </div>
+    </div>
+
+    <script>
+        function showLogin() {
+            document.getElementById('signup-form').classList.add('hidden');
+            document.getElementById('login-form').classList.remove('hidden');
+            checkLoginPassword();
+        }
+
+        function showSignup() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('signup-form').classList.remove('hidden');
+            checkSignupPassword();
+        }
+
+        function validatePassword(password) {
+            const minLength = 7;
+            const hasNumber = /\d/.test(password);
+            return password.length >= minLength && hasNumber;
+        }
+
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        function checkSignupPassword() {
+            const password = document.getElementById('signup-password').value;
+            const checkSpan = document.getElementById('signup-password-check');
+            if (validatePassword(password)) {
+                checkSpan.textContent = 'Password strength: ✓';
+                checkSpan.className = 'text-sm mt-1 text-green-500';
+            } else {
+                checkSpan.textContent = '';
+            }
+        }
+
+        function checkLoginPassword() {
+            const password = document.getElementById('login-password').value;
+            const checkSpan = document.getElementById('login-password-check');
+            if (validatePassword(password)) {
+                checkSpan.textContent = 'Password strength: ✓';
+                checkSpan.className = 'text-sm mt-1 text-green-500';
+            } else {
+                checkSpan.textContent = '';
+            }
+        }
+
+        function signup() {
+            const username = document.getElementById('signup-username').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            if (!username || !email || !password) {
+                alert('Please fill in all fields.');
+                return;
+            }
+            if (!validateEmail(email)) {
+                alert('Please enter a valid email address.');
+                return;
+            }
+            if (!validatePassword(password)) {
+                alert('Password must be at least 7 characters long and contain at least 1 number.');
+                return;
+            }
+            if (localStorage.getItem(username)) {
+                alert('Username already exists!');
+            } else {
+                localStorage.setItem(username, JSON.stringify({ password: password, email: email }));
+                showWelcome();
+            }
+        }
+
+        function login() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            const storedData = JSON.parse(localStorage.getItem(username));
+            if (!username || !password) {
+                alert('Please fill in all fields.');
+                return;
+            }
+            if (!validatePassword(password)) {
+                alert('Password must meet the requirements (7+ characters, 1+ number).');
+                return;
+            }
+            if (storedData && storedData.password === password) {
+                showWelcome();
+            } else {
+                alert('Invalid username or password.');
+            }
+        }
+
+        function handleGoogleSignIn(response) {
+            const googleId = response.credential;
+            // Store Google ID in localStorage (for demo purposes)
+            localStorage.setItem('googleUser', googleId);
+            showWelcome();
+            // In a real app, send the ID token to your backend for verification
+        }
+
+        function showWelcome() {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('welcome-section').classList.remove('hidden');
+        }
+
+        // Initialize Google Sign-In when the page loads
+        window.onload = function () {
+            google.accounts.id.initialize({
+                client_id: "YOUR_GOOGLE_CLIENT_ID_HERE",
+                callback: handleGoogleSignIn
+            });
+            google.accounts.id.renderButton(
+                document.querySelectorAll('.g_id_signin')[0],
+                { theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
+            );
+            google.accounts.id.renderButton(
+                document.querySelectorAll('.g_id_signin')[1],
+                { theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
+            );
+        };
+    </script>
+</body>
+</html>
